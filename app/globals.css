@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens. Default values live here; per-client overrides are injected
+ * on <html> from config/site.ts (see app/layout.tsx).
+ */
+:root {
+  --ink: #0e0e0c;
+  --ink-soft: #1a1a17;
+  --paper: #f2eee6;
+  --paper-deep: #e7e1d5;
+  --accent: #b23a2b;
+  --stone: #6f6a61;
+  --line: color-mix(in oklab, var(--ink) 14%, transparent);
+  --line-light: color-mix(in oklab, var(--paper) 16%, transparent);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-accent: var(--accent);
+  --color-stone: var(--stone);
+  --color-line: var(--line);
+  --color-line-light: var(--line-light);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+@layer components {
+  /* Unifies phone photography into one editorial grade. */
+  .graded {
+    filter: saturate(0.78) contrast(1.06) sepia(0.08) brightness(0.97);
+  }
+
+  .grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.16;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .vertical-jp {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 0.3em;
+  }
+
+  .hairline {
+    height: 1px;
+    background: currentColor;
+    opacity: 0.18;
+  }
+
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.5s var(--ease-calm);
+  }
+  .link-underline:hover {
+    background-size: 100% 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
