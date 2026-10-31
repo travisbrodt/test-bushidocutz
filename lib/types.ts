@@ -183,6 +183,8 @@ export interface SiteConfig {
     rating: { score: number; count: number; source: string; asOf: string };
     social: { label: string; href: string }[];
     instagram: { handle: string; href: string };
+    /** config service id -> Barberly service id, when names differ between the two. */
+    barberlyServiceMap?: Record<string, string>;
   };
   home: {
     hero: {

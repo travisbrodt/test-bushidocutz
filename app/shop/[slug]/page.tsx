@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { site, productsBySlug } from "@/config/site";
-import { asset } from "@/lib/asset";
 import { Photo } from "@/components/ui/Photo";
 import { Price } from "@/components/ui/Price";
 import { PurchaseOptions } from "@/components/commerce/PurchaseOptions";
@@ -20,7 +19,7 @@ export async function generateMetadata(props: PageProps<"/shop/[slug]">): Promis
   return {
     title: product.name,
     description: `${product.tagline} ${product.description[0]}`,
-    openGraph: { images: [{ url: asset(product.images[0].src) }] },
+    openGraph: { images: [{ url: product.images[0].src }] },
   };
 }
 

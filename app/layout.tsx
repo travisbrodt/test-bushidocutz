@@ -3,7 +3,6 @@ import { Inter, Shippori_Mincho } from "next/font/google";
 import type { CSSProperties } from "react";
 import "./globals.css";
 import { site } from "@/config/site";
-import { asset } from "@/lib/asset";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { StickyMobileBar } from "@/components/ui/StickyMobileBar";
@@ -20,7 +19,10 @@ const heading = Shippori_Mincho({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || site.seo.url),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : site.seo.url),
+  ),
   title: { default: site.seo.title, template: `%s | ${site.brand.shortName}` },
   description: site.seo.description,
   openGraph: {
@@ -28,9 +30,9 @@ export const metadata: Metadata = {
     siteName: site.brand.name,
     title: site.seo.title,
     description: site.seo.description,
-    images: [{ url: asset(site.seo.ogImage), width: 1200, height: 630, alt: site.brand.name }],
+    images: [{ url: site.seo.ogImage, width: 1200, height: 630, alt: site.brand.name }],
   },
-  icons: { icon: asset(site.brand.mark.src) },
+  icons: { icon: site.brand.mark.src },
 };
 
 export const viewport: Viewport = {

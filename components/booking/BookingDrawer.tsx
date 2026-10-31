@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { Check, Clock, ExternalLink } from "lucide-react";
-import { site, servicesById } from "@/config/site";
-import type { ServiceCategory } from "@/lib/types";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { site } from "@/config/site";
 import { cn, formatDuration, formatPrice } from "@/lib/format";
+import { loadAvailability, loadCatalog, submitBooking } from "@/lib/booking/client";
+import { shopNow } from "@/lib/booking/time";
+import type { AvailableDay, BookingCatalog, BookingConfirmation, Guest, TimeSlot } from "@/lib/booking/types";
 import { Drawer } from "@/components/ui/Drawer";
-import { Price } from "@/components/ui/Price";
-import { Seal } from "@/components/ui/Seal";
+import { ServiceStep } from "./ServiceStep";
+import { TimeStep } from "./TimeStep";
+import { DetailsStep, type DetailsForm } from "./DetailsStep";
+import { BookingConfirmed } from "./BookingConfirmed";
 
-const categoryLabels: Record<ServiceCategory, string> = {
-  cuts: "Cuts",
-  beard: "Beard",
-  rituals: "Rituals",
-  women: "Women",
-  kids: "Kids",
-};
-
-/** Services that already include every add-on. */
-const ALL_INCLUSIVE = new Set(["vip"]);
+type Step = "service" | "time" | "details" | "done";
+const STEPS: { id: Step; label: string }[] = [
+  { id: "service", label: "Service" },
+  { id: "time", label: "Time" },
+  { id: "details", label: "Details" },
+];
+const MONTHS_AHEAD = 2;
 
 export function BookingDrawer({
   open,
@@ -31,191 +31,293 @@ export function BookingDrawer({
   onClose: () => void;
 }) {
   return (
-    <Drawer open={open} onClose={onClose} eyebrow="Book with Michael" title="Your appointment">
+    <Drawer open={open} onClose={onClose} eyebrow={site.brand.shortName} title={`Book with ${site.brand.owner.name.split(" ")[0]}`}>
       {open && <BookingFlow key={initialServiceId ?? "none"} initialServiceId={initialServiceId} onClose={onClose} />}
     </Drawer>
   );
 }
 
 function BookingFlow({ initialServiceId, onClose }: { initialServiceId?: string; onClose: () => void }) {
-  const [serviceId, setServiceId] = useState<string | undefined>(
-    initialServiceId && servicesById[initialServiceId] ? initialServiceId : undefined,
-  );
+  const [catalog, setCatalog] = useState<BookingCatalog | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("service");
+
+  const [serviceId, setServiceId] = useState<string>();
   const [addOnIds, setAddOnIds] = useState<string[]>([]);
-  const [handedOff, setHandedOff] = useState(false);
-  const addOnsRef = useRef<HTMLFieldSetElement>(null);
+  const [barberId, setBarberId] = useState<string>();
+
+  const [month, setMonth] = useState<{ year: number; month: number }>();
+  const [days, setDays] = useState<AvailableDay[] | null>(null);
+  const [daysError, setDaysError] = useState<string | null>(null);
+  const [date, setDate] = useState<string>();
+  const [slot, setSlot] = useState<TimeSlot>();
+
+  const [form, setForm] = useState<DetailsForm>({ firstName: "", lastName: "", phone: "", email: "", note: "", company: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
+  const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (initialServiceId) addOnsRef.current?.scrollIntoView({ block: "start" });
+    let active = true;
+    loadCatalog().then(
+      (c) => {
+        if (!active) return;
+        setCatalog(c);
+        const preselected = initialServiceId
+          ? c.groups.flatMap((g) => g.services).find((s) => s.siteServiceId === initialServiceId)
+          : undefined;
+        if (preselected) setServiceId(preselected.id);
+        if (c.barbers.length === 1) setBarberId(c.barbers[0].id);
+      },
+      (err: Error) => active && setCatalogError(err.message),
+    );
+    return () => {
+      active = false;
+    };
   }, [initialServiceId]);
 
-  const selectService = (id: string) => {
-    setServiceId(id);
-    requestAnimationFrame(() => addOnsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  const service = catalog?.groups.flatMap((g) => g.services).find((s) => s.id === serviceId);
+  const addOns = service?.addOns.filter((a) => addOnIds.includes(a.id)) ?? [];
+  const total = (service?.price ?? 0) + addOns.reduce((s, a) => s + a.price, 0);
+  const duration = (service?.durationMin ?? 0) + addOns.reduce((s, a) => s + a.durationMin, 0);
+  const selected = service
+    ? [{ serviceId: service.id }, ...addOns.map((a) => ({ serviceId: a.id, parentServiceId: service.id }))]
+    : [];
+
+  const go = (next: Step) => {
+    setStep(next);
+    topRef.current?.scrollIntoView({ block: "start" });
   };
 
-  const service = serviceId ? servicesById[serviceId] : undefined;
-  const addOnsAllowed = service && !ALL_INCLUSIVE.has(service.id);
-  const chosenAddOns = addOnsAllowed ? site.addOns.filter((a) => addOnIds.includes(a.id)) : [];
-  const total = (service?.price ?? 0) + chosenAddOns.reduce((s, a) => s + a.price, 0);
-  const duration = (service?.durationMin ?? 0) + chosenAddOns.reduce((s, a) => s + a.durationMin, 0);
-
-  const grouped = useMemo(() => {
-    const map = new Map<ServiceCategory, typeof site.services>();
-    for (const s of site.services) map.set(s.category, [...(map.get(s.category) ?? []), s]);
-    return [...map.entries()];
-  }, []);
-
-  const memberTier = site.membership.tiers.find((t) => t.includes.some((i) => i.label.includes("Men's Precision Cut")));
-  const showMemberNudge = service && ["mens-cut", "cut-beard"].includes(service.id) && memberTier;
-
-  const continueToSchedule = () => {
-    window.open(site.integrations.bookingUrl, "_blank", "noopener,noreferrer");
-    setHandedOff(true);
+  const resetTime = () => {
+    setDays(null);
+    setDate(undefined);
+    setSlot(undefined);
   };
 
-  if (handedOff && service) {
+  const fetchMonth = async (target: { year: number; month: number }) => {
+    if (!catalog) return;
+    setMonth(target);
+    setDays(null);
+    setDaysError(null);
+    try {
+      const result = await loadAvailability({ locationId: catalog.locationId, ...target, selected, barberId });
+      setDays(result);
+      const firstOpen = result.find((d) => d.available);
+      setDate(firstOpen?.date);
+      setSlot(undefined);
+    } catch (err) {
+      setDaysError((err as Error).message);
+    }
+  };
+
+  const toTime = () => {
+    go("time");
+    if (!days) {
+      const now = shopNow();
+      fetchMonth({ year: now.year, month: now.month });
+    }
+  };
+
+  const submit = async () => {
+    if (!catalog || !slot) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    const guest: Guest = { firstName: form.firstName, lastName: form.lastName, phone: form.phone, email: form.email };
+    try {
+      const result = await submitBooking({
+        locationId: catalog.locationId,
+        barberId,
+        selected,
+        slot: { date: slot.date, start: slot.start, duration: slot.duration },
+        guest,
+        note: form.note,
+        company: form.company,
+      });
+      setConfirmation(result);
+      go("done");
+    } catch (err) {
+      setSubmitError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (catalogError) {
     return (
-      <div className="flex flex-col items-start gap-6 py-4">
-        <Seal text="予約" size="lg" />
-        <div>
-          <h3 className="font-display text-3xl leading-tight">Almost there.</h3>
-          <p className="mt-3 text-stone">
-            Our scheduler opened in a new tab. Choose <strong className="text-ink">{service.name}</strong>
-            {chosenAddOns.length > 0 && <> and mention {chosenAddOns.map((a) => a.name).join(", ")}</>} when you pick your time.
-          </p>
-        </div>
-        <dl className="w-full divide-y divide-line border-y border-line text-sm">
-          <div className="flex justify-between py-3"><dt className="text-stone">Estimated time</dt><dd>{formatDuration(duration)}</dd></div>
-          <div className="flex justify-between py-3"><dt className="text-stone">Estimated total</dt><dd>{formatPrice(total)}</dd></div>
-        </dl>
-        <a href={site.integrations.bookingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm underline underline-offset-4">
-          Scheduler didn&apos;t open? Open it here <ExternalLink className="size-3.5" />
+      <div className="space-y-4 py-4">
+        <p className="font-display text-2xl">Online booking is taking a breather.</p>
+        <p className="text-stone">{catalogError}</p>
+        <a
+          href={site.integrations.bookingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-accent px-6 py-4 text-xs font-medium uppercase tracking-[0.2em] text-paper"
+        >
+          Book on our scheduler <ExternalLink className="size-3.5" />
         </a>
-        {showMemberNudge && (
-          <div className="w-full bg-ink p-6 text-paper">
-            <p className="eyebrow text-paper/50">Coming back every few weeks?</p>
-            <p className="mt-2 font-display text-xl">Members get priority booking and pay less per cut.</p>
-            <Link href="/membership" onClick={onClose} className="mt-4 inline-block text-xs uppercase tracking-[0.2em] underline underline-offset-4">
-              See The Dojo membership
-            </Link>
-          </div>
-        )}
+        <p className="text-sm text-stone">
+          Or call <a href={site.contact.phoneHref} className="underline underline-offset-4">{site.contact.phone}</a>.
+        </p>
       </div>
     );
   }
 
+  if (!catalog) return <CatalogSkeleton />;
+
+  if (step === "done" && confirmation && service) {
+    return (
+      <BookingConfirmed
+        confirmation={confirmation}
+        service={service}
+        addOns={addOns}
+        total={total}
+        demo={catalog.mode === "demo"}
+        onClose={onClose}
+      />
+    );
+  }
+
+  const stepIndex = STEPS.findIndex((s) => s.id === step);
+  const now = shopNow();
+  const monthOffset = month ? (month.year - now.year) * 12 + (month.month - now.month) : 0;
+
   return (
     <div className="flex min-h-full flex-col">
-      <div className="space-y-8">
-        {grouped.map(([category, services]) => (
-          <fieldset key={category}>
-            <legend className="eyebrow mb-3 text-stone">{categoryLabels[category]}</legend>
-            <div className="space-y-2">
-              {services.map((s) => {
-                const selected = s.id === serviceId;
-                return (
-                  <label
-                    key={s.id}
-                    className={cn(
-                      "flex cursor-pointer items-start gap-4 border p-4 transition-colors",
-                      selected ? "border-ink bg-ink text-paper" : "border-line hover:border-ink/40",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="service"
-                      value={s.id}
-                      checked={selected}
-                      onChange={() => selectService(s.id)}
-                      className="sr-only"
-                    />
-                    <span className={cn("mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border", selected ? "border-paper" : "border-ink/30")}>
-                      {selected && <span className="size-2 rounded-full bg-accent" />}
-                    </span>
-                    <span className="flex-1">
-                      <span className="flex items-baseline justify-between gap-4">
-                        <span className="font-display text-lg leading-tight">{s.name}</span>
-                        <Price amount={s.price} placeholder={s.placeholder} className="text-base" />
-                      </span>
-                      <span className={cn("mt-1 flex items-center gap-1.5 text-xs", selected ? "text-paper/60" : "text-stone")}>
-                        <Clock className="size-3" /> {formatDuration(s.durationMin)}
-                        <span aria-hidden>·</span>
-                        <span className="line-clamp-1">{s.summary}</span>
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+      <div ref={topRef} className="-mt-6 scroll-mt-6 pt-6" />
+      <ol className="mb-8 grid grid-cols-3 gap-2" aria-label="Booking steps">
+        {STEPS.map((s, i) => (
+          <li key={s.id} aria-current={i === stepIndex ? "step" : undefined}>
+            <span className={cn("block h-0.5", i <= stepIndex ? "bg-accent" : "bg-line")} />
+            <span className={cn("mt-2 block text-[0.65rem] uppercase tracking-[0.2em]", i === stepIndex ? "text-ink" : "text-stone")}>
+              {i + 1}. {s.label}
+            </span>
+          </li>
         ))}
+      </ol>
 
-        {service && (
-          <fieldset ref={addOnsRef} className="scroll-mt-4">
-            <legend className="eyebrow mb-1 text-stone">Omotenashi add-ons</legend>
-            {addOnsAllowed ? (
-              <>
-                <p className="mb-3 text-sm text-stone">Small rituals that honor the guest in the chair.</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {site.addOns.map((a) => {
-                    const checked = addOnIds.includes(a.id);
-                    return (
-                      <label
-                        key={a.id}
-                        className={cn(
-                          "flex cursor-pointer flex-col gap-1 border p-4 transition-colors",
-                          checked ? "border-accent bg-accent/5" : "border-line hover:border-ink/40",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={checked}
-                          onChange={() =>
-                            setAddOnIds((ids) => (checked ? ids.filter((id) => id !== a.id) : [...ids, a.id]))
-                          }
-                        />
-                        <span className="flex items-center justify-between gap-2 text-sm font-medium">
-                          {a.name}
-                          <span className={cn("flex size-4 items-center justify-center border", checked ? "border-accent bg-accent text-paper" : "border-ink/30")}>
-                            {checked && <Check className="size-3" strokeWidth={3} />}
-                          </span>
-                        </span>
-                        <span className="text-xs text-stone">{a.description}</span>
-                        <span className="mt-1 text-xs">
-                          + <Price amount={a.price} placeholder={a.placeholder} /> · {a.durationMin} min
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-stone">Every ritual is already included in {service.name}.</p>
-            )}
-          </fieldset>
+      <div className="flex-1">
+        {step === "service" && (
+          <ServiceStep
+            catalog={catalog}
+            serviceId={serviceId}
+            addOnIds={addOnIds}
+            barberId={barberId}
+            scrollToAddOns={!!initialServiceId && serviceId !== undefined}
+            onService={(id) => {
+              setServiceId(id);
+              setAddOnIds([]);
+              resetTime();
+            }}
+            onToggleAddOn={(id) => {
+              setAddOnIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+              resetTime();
+            }}
+            onBarber={(id) => {
+              setBarberId(id);
+              resetTime();
+            }}
+          />
+        )}
+        {step === "time" && (
+          <TimeStep
+            month={month}
+            days={days}
+            error={daysError}
+            date={date}
+            slot={slot}
+            canPrev={monthOffset > 0}
+            canNext={monthOffset < MONTHS_AHEAD}
+            onMonth={(delta) => {
+              if (!month) return;
+              const d = new Date(Date.UTC(month.year, month.month - 1 + delta, 1));
+              fetchMonth({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
+            }}
+            onRetry={() => month && fetchMonth(month)}
+            onDate={(d) => {
+              setDate(d);
+              setSlot(undefined);
+            }}
+            onSlot={setSlot}
+          />
+        )}
+        {step === "details" && slot && service && (
+          <DetailsStep
+            form={form}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            onSubmit={submit}
+            error={submitError}
+            summary={{ service, addOns, slot, total }}
+          />
         )}
       </div>
 
-      <div className="sticky bottom-0 -mx-6 mt-8 border-t border-line bg-paper px-6 pt-5 pb-1 md:-mx-8 md:px-8">
+      <div className="sticky -bottom-6 -mx-6 mt-8 -mb-6 border-t border-line bg-paper px-6 pt-5 pb-6 md:-mx-8 md:px-8">
         <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow whitespace-nowrap text-stone">Est. total</p>
-            <p className="font-display text-3xl tabular-nums">{formatPrice(total)}</p>
-            <p className="text-xs text-stone">{service ? formatDuration(duration) : "Select a service"}</p>
+          <div className="min-w-0">
+            {step === "service" ? (
+              <>
+                <p className="eyebrow whitespace-nowrap text-stone">Est. total</p>
+                <p className="font-display text-3xl tabular-nums">{formatPrice(total)}</p>
+                <p className="text-xs text-stone">{service ? formatDuration(duration) : "Select a service"}</p>
+              </>
+            ) : (
+              <BackButton onClick={() => go(step === "details" ? "time" : "service")}>Back</BackButton>
+            )}
           </div>
-          <button
-            type="button"
-            disabled={!service}
-            onClick={continueToSchedule}
-            className="shrink-0 whitespace-nowrap bg-accent px-5 py-4 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-paper transition-opacity disabled:opacity-30 md:px-6"
-          >
-            Choose a time →
-          </button>
+          {step === "service" && (
+            <PrimaryButton disabled={!service} onClick={toTime}>
+              Choose a time →
+            </PrimaryButton>
+          )}
+          {step === "time" && (
+            <PrimaryButton disabled={!slot} onClick={() => go("details")}>
+              {slot ? `${slot.label} · Continue →` : "Pick a time"}
+            </PrimaryButton>
+          )}
+          {step === "details" && (
+            <PrimaryButton type="submit" form="booking-details" disabled={submitting}>
+              {submitting ? "Booking…" : `Confirm · ${formatPrice(total)}`}
+            </PrimaryButton>
+          )}
         </div>
-        <p className="mt-3 text-[0.7rem] text-stone">Times and payment are confirmed on our secure scheduler.</p>
+        <p className="mt-3 text-[0.7rem] text-stone">
+          {catalog.mode === "demo"
+            ? "Prototype: sample times shown until Michael's calendar is connected."
+            : "Real-time availability from Michael's calendar."}
+        </p>
       </div>
+    </div>
+  );
+}
+
+function PrimaryButton({ children, ...props }: React.ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className="shrink-0 whitespace-nowrap bg-accent px-5 py-4 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-paper transition-opacity disabled:opacity-30 md:px-6"
+    >
+      {children}
+    </button>
+  );
+}
+
+function BackButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-2 py-4 text-xs uppercase tracking-[0.2em] text-stone hover:text-ink">
+      <ArrowLeft className="size-3.5" /> {children}
+    </button>
+  );
+}
+
+function CatalogSkeleton() {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Loading services">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="h-[74px] animate-pulse border border-line bg-paper-deep/60" />
+      ))}
     </div>
   );
 }
