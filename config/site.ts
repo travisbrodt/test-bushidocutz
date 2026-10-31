@@ -33,6 +33,7 @@ export const site: SiteConfig = {
     description:
       "Precision men's haircuts, fades, beard rituals and hot towel shaves by Master Barber Michael Hedden. A private suite inside Sola Salons on Scholls Ferry Rd, Beaverton.",
     serviceAreas: ["Beaverton", "Aloha", "Hillsboro", "Tigard", "Portland"],
+    ogImage: "/images/brand/og.jpg",
   },
 
   contact: {
@@ -63,6 +64,7 @@ export const site: SiteConfig = {
       "Phone: old site listed both (772) 924-7609 and (503) 971-464-0286",
       "Hours: home page said closed Wednesday, About page said open Mon-Fri",
       "Map coordinates are approximate",
+      "Accolades are taken from Michael's promo graphics; confirm exact award names",
     ],
   },
 
@@ -71,9 +73,11 @@ export const site: SiteConfig = {
     reviewsUrl: "https://share.google/5JioQiDniYCgllwQ4",
     rating: { score: 4.9, count: 107, source: "Google", asOf: "October 2026" },
     social: [
+      { label: "Instagram", href: "https://www.instagram.com/bushidocutzhairstudio/" },
       { label: "TikTok", href: "https://tiktok.com/@bushidocutz" },
       { label: "Facebook", href: "https://www.facebook.com/bushidocutzllc" },
     ],
+    instagram: { handle: "bushidocutzhairstudio", href: "https://www.instagram.com/bushidocutzhairstudio/" },
   },
 
   home: {
@@ -92,6 +96,10 @@ export const site: SiteConfig = {
       "Private suite, never rushed",
       "Hot towel & straight razor",
       "Men's, women's & kids' cuts",
+    ],
+    accolades: [
+      { title: "Business Excellence Award 2026", detail: "Premier Industry Ratings Institute · Portland Metro" },
+      { title: "Meritly Verified", detail: "Independently verified local business" },
     ],
     ritual: {
       eyebrow: "Omotenashi · The VIP Experience",
@@ -423,6 +431,7 @@ export const site: SiteConfig = {
       size: "3.53 oz / 100 g",
       images: [
         { src: "/images/products/matte-cream.jpg", alt: "Bushido Matte Cream jar with gold brush-stroke label", ungraded: true },
+        { src: "/images/products/matte-cream-ritual.jpg", alt: "An open jar of Bushido Matte Cream beside a katana and cherry blossom petals" },
         { src: "/images/products/product-line.jpg", alt: "The Bushido product line on display" },
       ],
       description: [
@@ -447,6 +456,27 @@ export const site: SiteConfig = {
         { quote: "Keeps my hair perfectly styled all day without any greasy shine.", author: "James H." },
         { quote: "Love how natural it feels and holds my style without stiffness.", author: "Mark T." },
       ],
+    },
+    {
+      slug: "rei-styling-putty",
+      name: "Bushido Rei Styling Putty",
+      tagline: "Matte finish. Light hold. Effortless texture.",
+      price: 26,
+      placeholder: true,
+      size: "80 g / 2.7 fl oz",
+      images: [{ src: "/images/products/rei-putty.jpg", alt: "Three bottles of Bushido Rei Styling Putty, matte finish, light hold" }],
+      description: [
+        "Rei (礼) is the Bushido virtue of respect. A light-hold putty with a true matte finish for textured, natural styles that still move the way hair should.",
+        "Built for crops, fringes and lived-in texture where a heavier cream would weigh things down.",
+      ],
+      features: [
+        { label: "Hold", value: "Light, flexible" },
+        { label: "Finish", value: "Matte" },
+        { label: "Best for", value: "Crops, fringes, texture" },
+      ],
+      subscribable: true,
+      draftCopy: true,
+      isNew: true,
     },
     {
       slug: "sea-salt-spray",
@@ -504,16 +534,22 @@ export const site: SiteConfig = {
     },
     {
       slug: "premium-shears",
-      name: "Bushido Premium Shears Set",
+      name: "Bushido 440C Japanese Steel Shears",
       tagline: "The tools behind the craft.",
       price: 189,
       placeholder: true,
-      size: "Cutting + thinning shear",
-      images: [{ src: "/images/studio/shears.jpg", alt: "Bushido premium cutting and thinning shears in a presentation box" }],
+      size: '6" cutting + thinning shear',
+      images: [
+        { src: "/images/products/shears-440c.jpg", alt: "Bushido 440C Japanese steel cutting and thinning shears", ungraded: true },
+        { src: "/images/studio/shears.jpg", alt: "Bushido shears in their presentation box" },
+      ],
       description: [
-        "The same Bushido-branded shears used in the chair. A precision cutting shear and a thinning shear, presented in a magnetic box.",
+        "The same Bushido-branded shears used in the chair. Forged from 440C Japanese stainless steel with a 6-inch convex edge that glides through hair instead of pushing it.",
+        "A precision cutting shear and a matching thinning shear, presented in a magnetic box.",
       ],
       features: [
+        { label: "Steel", value: "440C Japanese stainless" },
+        { label: "Edge", value: '6" convex' },
         { label: "Includes", value: "Cutting + thinning shear" },
         { label: "Presentation", value: "Magnetic gift box" },
       ],
@@ -554,6 +590,7 @@ export const site: SiteConfig = {
   ],
 
   gallery: [
+    { src: "/images/cuts/drop-fade.jpg", alt: "Textured fringe with a drop fade", category: "fades", caption: "Drop fade", position: "40% 50%" },
     { src: "/images/cuts/textured-crop.jpg", alt: "Textured crop with a low skin fade", category: "textured", caption: "Textured crop" },
     { src: "/images/cuts/side-fade-beard.jpg", alt: "Side-part fade with a full shaped beard", category: "beard", caption: "Fade & full beard", tall: true },
     { src: "/images/cuts/mid-skin-fade.jpg", alt: "Mid skin fade with swept-back top", category: "fades", caption: "Mid skin fade", position: "0% 45%", zoom: 1.35, tall: true },
@@ -566,6 +603,10 @@ export const site: SiteConfig = {
     { src: "/images/transformations/crop.jpg", alt: "Before and after: long shag to a textured crop", category: "transformations", ungraded: true },
     { src: "/images/transformations/skin-fade-beard.jpg", alt: "Mid skin fade and beard shaping, two angles", category: "transformations", ungraded: true },
     { src: "/images/transformations/layered.jpg", alt: "Men's layered cut, two angles", category: "transformations", ungraded: true },
+    { src: "/images/transformations/low-taper.jpg", alt: "Before and after: grown-out sides to a low taper", category: "transformations", ungraded: true },
+    { src: "/images/transformations/short-crop.jpg", alt: "Short textured crop with a skin fade, two angles", category: "transformations", ungraded: true },
+    { src: "/images/transformations/bleached-crop.jpg", alt: "Bleached textured crop with a high skin fade, two angles", category: "transformations", ungraded: true },
+    { src: "/images/transformations/low-fade.jpg", alt: "Short textured cut with a low fade, two angles", category: "transformations", ungraded: true },
     { src: "/images/studio/suite.jpg", alt: "The private Bushido Cutz suite at Sola Salons", category: "studio", caption: "The suite" },
     { src: "/images/studio/virtues-wall.jpg", alt: "Katanas and the Seven Virtues of Bushido on the studio wall", category: "studio", caption: "The Seven Virtues" },
     { src: "/images/studio/shears.jpg", alt: "Bushido premium shears", category: "studio", caption: "The tools", tall: true },

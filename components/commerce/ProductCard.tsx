@@ -19,6 +19,11 @@ export function ProductCard({ product }: { product: Product }) {
             Subscribe · save {site.subscription.discountPct}%
           </span>
         )}
+        {product.isNew && (
+          <span className="absolute top-4 right-4 z-[2] bg-accent px-2.5 py-1 text-[0.6rem] uppercase tracking-[0.2em] text-paper">
+            New
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-6">
         <div className="flex items-baseline justify-between gap-4">

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: site.brand.name,
     title: site.seo.title,
     description: site.seo.description,
-    images: [{ url: asset(site.home.hero.image.src) }],
+    images: [{ url: asset(site.seo.ogImage), width: 1200, height: 630, alt: site.brand.name }],
   },
   icons: { icon: asset(site.brand.mark.src) },
 };

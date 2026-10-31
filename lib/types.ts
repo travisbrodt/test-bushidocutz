@@ -100,6 +100,7 @@ export interface Product {
   reviews?: Testimonial[];
   /** Copy still needs owner input before launch. */
   draftCopy?: boolean;
+  isNew?: boolean;
 }
 
 export interface Bundle {
@@ -155,6 +156,8 @@ export interface SiteConfig {
     title: string;
     description: string;
     serviceAreas: string[];
+    /** Link-preview image for shared URLs, 1200x630. */
+    ogImage: string;
   };
   contact: {
     phone: string;
@@ -179,6 +182,7 @@ export interface SiteConfig {
     reviewsUrl: string;
     rating: { score: number; count: number; source: string; asOf: string };
     social: { label: string; href: string }[];
+    instagram: { handle: string; href: string };
   };
   home: {
     hero: {
@@ -188,6 +192,7 @@ export interface SiteConfig {
       image: ImageRef;
     };
     proof: string[];
+    accolades: { title: string; detail: string }[];
     ritual: {
       eyebrow: string;
       title: string;

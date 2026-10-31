@@ -7,12 +7,13 @@ import { BundleButton } from "@/components/commerce/BundleButton";
 import { Photo } from "@/components/ui/Photo";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
-import { PlaceholderLegend } from "@/components/ui/Price";
+import { Price, PlaceholderLegend } from "@/components/ui/Price";
+import Link from "next/link";
 import { ProductFeature } from "@/components/sections/ProductFeature";
 
 export const metadata: Metadata = {
   title: "Shop Bushido Products",
-  description: "Bushido Matte Cream, Sea Salt Spray, Styling Powder and premium shears. Subscribe and save, or pick up at your next cut.",
+  description: "Bushido Matte Cream, the new Rei Styling Putty, Sea Salt Spray, Styling Powder and 440C Japanese steel shears. Subscribe and save, or pick up at your next cut.",
 };
 
 const subscribePoints = [
@@ -25,6 +26,8 @@ export default function ShopPage() {
   const bundle = site.bundles[0];
   const bundleRetail = bundle?.productSlugs.reduce((s, slug) => s + (productsBySlug[slug]?.price ?? 0), 0) ?? 0;
   const others = site.products.filter((p) => p.slug !== "matte-cream");
+  const styling = others.filter((p) => p.subscribable);
+  const tools = others.filter((p) => !p.subscribable);
 
   return (
     <>
@@ -40,12 +43,35 @@ export default function ShopPage() {
           <PlaceholderLegend />
         </div>
         <div className="mt-12 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {others.map((p, i) => (
+          {styling.map((p, i) => (
             <Reveal key={p.slug} delay={i * 0.06}>
               <ProductCard product={p} />
             </Reveal>
           ))}
         </div>
+        {tools.map((p) => (
+          <Reveal key={p.slug}>
+            <Link href={`/shop/${p.slug}`} className="group mt-16 grid items-center gap-10 border-t border-line pt-16 md:grid-cols-2 md:gap-16">
+              <Photo
+                image={p.images[0]}
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="aspect-[4/3]"
+                imgClassName="transition-transform duration-[1.4s] ease-calm group-hover:scale-[1.03]"
+              />
+              <div>
+                <p className="eyebrow text-stone">The tools</p>
+                <h3 className="mt-4 font-display text-4xl leading-tight">{p.name.replace("Bushido ", "")}</h3>
+                <p className="mt-4 leading-relaxed text-stone">{p.description[0]}</p>
+                <p className="mt-6 flex items-baseline gap-6">
+                  <Price amount={p.price} placeholder={p.placeholder} className="font-display text-3xl" />
+                  <span className="text-xs uppercase tracking-[0.2em] text-stone transition-colors group-hover:text-ink">
+                    {p.size} <span aria-hidden>→</span>
+                  </span>
+                </p>
+              </div>
+            </Link>
+          </Reveal>
+        ))}
       </section>
 
       {bundle && (

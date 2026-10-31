@@ -41,6 +41,17 @@ export function Testimonials() {
             <p className="font-display text-5xl">{site.integrations.rating.score}</p>
             <Rating className="mt-2" />
           </div>
+          <ul className="space-y-4 border-t border-line pt-6">
+            {site.home.accolades.map((a) => (
+              <li key={a.title} className="flex gap-3">
+                <span aria-hidden className="mt-1.5 inline-block size-1.5 shrink-0 rotate-45 bg-accent" />
+                <span>
+                  <span className="block text-sm font-medium">{a.title}</span>
+                  <span className="block text-xs text-stone">{a.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
